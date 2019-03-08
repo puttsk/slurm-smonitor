@@ -20,46 +20,66 @@ class SlurmParser(object):
     REPLACE = 'REPLACE'
 
     entry_regex = re.compile(r'(\w[^\s=]+)=([^\s]*)')
-    tres_regex = re.compile(r'(\w[^\s=]+)=([^\s,]*)')
+    subentry_regex = re.compile(r'(\w[^\s=]+)=([^\s,]*)')
 
     @staticmethod
     def __conv(v):
-        return v.strip() if v not in ['(null)', 'None'] else None
+        if v in ['(null)', 'None']: 
+            return None
+        
+        return v.strip() 
 
     @staticmethod
-    def parse_job_info(slurm_output):
+    def parse_job_info(slurm_output, key=None):
         if type(slurm_output) is str:
             slurm_output = slurm_output.splitlines()
 
-        output = []
+        if key: 
+            output = {}
+        else:
+            output = []
+
         entry = None
 
         for line in slurm_output:
-            print(line)
             leading_space = len(line) - len(line.lstrip())
             line = line.lstrip()
 
             if len(line) == 0 and leading_space == 0:
                 continue
 
-            # New entry
+            # New scontrol entry
             if len(line) > 0 and leading_space == 0:
                 if entry:
-                    output.append(entry)
-                    break
+                    if key:
+                        output[entry[key]] = entry    
+                    else:
+                        output.append(entry)
+
                 entry = {}
-                
 
             params_list = SlurmParser.entry_regex.findall(line)
-            print(params_list)
             params = {y[0]:(SlurmParser.__conv(y[1]) if y[1] else None) for y in params_list}
             for p in params:
                 if params[p]:
-                    tres_list = SlurmParser.tres_regex.findall(params[p])
-                    if len(tres_list) > 0:
-                        params[p] = {y[0]:(SlurmParser.__conv(y[1]) if y[1] else None) for y in tres_list}
-            
-            entry.update(params)
+                    subentry_list = SlurmParser.subentry_regex.findall(params[p])
+                    if len(subentry_list) > 0:
+                        params[p] = {y[0]:(SlurmParser.__conv(y[1]) if y[1] else None) for y in subentry_list}
+                if entry.get(p, None):
+                    if type(entry[p]) is list:
+                        entry[p].append(params[p])
+                    else:
+                        entry[p] = [entry[p], params[p]]
+                else:
+                    entry[p] = params[p]
+
+        if entry:
+            if key:
+                output[entry[key]] = entry    
+            else:
+                output.append(entry)
+
+
         return SlurmResult(output)
 
     @staticmethod
