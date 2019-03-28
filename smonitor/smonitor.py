@@ -14,7 +14,7 @@ from pprint import pprint
 from .config import __version__
 
 from .slurm.parser import SlurmParser
-from .slurm.utils import print_cpu_usage
+from .utils.time import date_range
 
 def parse_args():
     slurm_version = str(subprocess.check_output(['sinfo', '--version']))
@@ -22,9 +22,11 @@ def parse_args():
 
     parser = argparse.ArgumentParser(prog='smonitor', description='Slurm monitoring tools')
     parser.add_argument(
-        '-S', '--summary', action='store_true', help="summarize system state.")
+        'type', action='store', nargs='?', help="Monitoring metric. Valid values: 'utility'")
     parser.add_argument(
-        '--output', action='store', help="Output format. Only json is currently supported")
+        '--format', action='store', help="Output format. Valid values: 'json'")
+    parser.add_argument(
+        '-o','--output', action='store', help="output file")
     parser.add_argument(
         '-V', '--version', action='version', version=version)
     parser.add_argument(
@@ -43,17 +45,31 @@ def main():
     else:
         verbose_print = lambda *a, **k: None
 
-    if args.summary:
-        sreport_command = 'sreport -P -t min cluster utilization'
-        sreport_output = subprocess.check_output(sreport_command.split(' '), universal_newlines=True)
-        sreport_results = SlurmParser.parse_output(sreport_output)
+    if args.type == 'utilization':
+        output = []
+        begin_date = datetime.strptime("2019-02-21", '%Y-%m-%d')
 
-        utilization = sreport_results.results[0]
+        for d in date_range(begin_date, datetime.now()):
+            
+            sreport_command = 'sreport -P -t min cluster utilization start={} end={}'.format(d.start.strftime('%Y-%m-%d'), d.end.strftime('%Y-%m-%d'))
+            sreport_output = subprocess.check_output(sreport_command.split(' '), universal_newlines=True)
+            sreport_results = SlurmParser.parse_output(sreport_output)
 
-        yesterday = datetime.now() - timedelta(days=1)
-        utilization['date'] = yesterday.strftime('%Y-%m-%d')
-        
-        print(json.dumps(utilization))
+            utilization = sreport_results.results[0]
+            utilization['StartDate'] = d.start.strftime('%Y-%m-%d')
+            utilization['EndDate'] = d.end.strftime('%Y-%m-%d')
+            utilization['Utilization'] = utilization['Allocated'] / float(utilization['Reported'])
+
+            output.append(utilization)
+
+        if args.format == 'json':
+            if args.output:
+                with open(args.output, 'wt') as f:
+                    json.dump(output, f,indent=4, sort_keys=True)
+            else:
+                print(json.dumps(output, indent=4, sort_keys=True))
+        else:
+            pprint(output)
     else:
         parser.print_help()
     
