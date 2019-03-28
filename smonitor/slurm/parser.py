@@ -21,11 +21,16 @@ class SlurmParser(object):
 
     entry_regex = re.compile(r'(\w[^\s=]+)=([^\s]*)')
     subentry_regex = re.compile(r'(\w[^\s=]+)=([^\s,]*)')
+    sreport_comment_regex = re.compile(r'^-*$')
 
     @staticmethod
     def __conv(v):
         if v in ['(null)', 'None']: 
             return None
+        
+        if type(v) is str:
+            if v.isdigit():
+                return int(v)
         
         return v.strip() 
 
@@ -87,13 +92,30 @@ class SlurmParser(object):
         if type(slurm_output) is str:
             slurm_output = slurm_output.splitlines()
 
+        # Remove sreport information sections between two horizontal lines.
+        #
+        # Example:
+        # --------------------------------------------------------------------------------
+        # Cluster Utilization 2019-03-26T00:00:00 - 2019-03-26T23:59:59
+        # Usage reported in CPU Minutes
+        # --------------------------------------------------------------------------------
+        # Cluster|Allocated|Down|PLND Down|Idle|Reserved|Reported
+        # tara|3084213|0|0|2047833|1203954|6336000
+        #
+        
+        if SlurmParser.sreport_comment_regex.match(slurm_output[0]):
+            slurm_output.pop(0)
+            while not SlurmParser.sreport_comment_regex.match(slurm_output[0]):
+                slurm_output.pop(0)
+            slurm_output.pop(0)
+
         if not headers:
             headers = slurm_output.pop(0).split('|')
 
         output_map = [zip(headers,line.split('|')) for line in slurm_output]
 
         if not key:            
-            return SlurmResult([{k.strip():SlurmParser.__conv(v) for k,v in record} for record in output_map], fields=header)
+            return SlurmResult([{k.strip():SlurmParser.__conv(v) for k,v in record} for record in output_map], fields=headers)
 
         if key: 
             ret = {}
