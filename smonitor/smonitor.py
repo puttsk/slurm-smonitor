@@ -3,18 +3,16 @@
 #
 from __future__ import print_function
 
-import re
 import json
 import argparse
 import subprocess
 
-from datetime import datetime, timedelta
-from pprint import pprint
+from datetime import datetime
 
 from .config import __version__, SERVICE_BEGIN_DATE
 
-from .slurm.parser import SlurmParser
-from .utils.time import date_range
+from .utils.io import generate_output
+from .report.report import report_utilization
 
 def parse_args():
     slurm_version = str(subprocess.check_output(['sinfo', '--version']))
@@ -64,7 +62,7 @@ def main():
     parser = parse_args()
     args = parser.parse_args()
     validate_args(args, parser)
-    
+
     if args.verbose:
         def verbose_print(*a, **k):
             if k.pop('level', 0) <= args.verbose:
@@ -73,33 +71,12 @@ def main():
         verbose_print = lambda *a, **k: None
 
     if args.type == 'utilization':
-        output = []
-
         begin_date = args.start if args.start else datetime.strptime(SERVICE_BEGIN_DATE, '%Y-%m-%d')
         end_date = args.end if args.end else datetime.now()
         
-        for d in date_range(begin_date, end_date, freq=args.freq):
-            sreport_command = 'sreport -P -t min cluster utilization start={} end={}'.format(d.start.strftime('%Y-%m-%d'), d.end.strftime('%Y-%m-%d'))
-            sreport_output = subprocess.check_output(sreport_command.split(' '), universal_newlines=True)
-            sreport_results = SlurmParser.parse_output(sreport_output)
+        output = report_utilization(begin_date, end_date, freq=args.freq)
+        generate_output(output, args.format, args.output)
 
-            if len(sreport_results.results) > 0:
-                utilization = sreport_results.results[0]
-                utilization['StartDate'] = d.start.strftime('%Y-%m-%d')
-                utilization['EndDate'] = d.end.strftime('%Y-%m-%d')
-                utilization['Utilization'] = utilization['Allocated'] / float(utilization['Reported'])
-
-                output.append(utilization)
-
-        if args.format == 'json':
-            if args.output:
-                with open(args.output, 'wt') as f:
-                    json.dump(output, f,indent=4, sort_keys=True)
-            else:
-                print(json.dumps(output, indent=4, sort_keys=True))
-        else:
-            pprint(output)
     else:
         parser.print_help()
-    
 

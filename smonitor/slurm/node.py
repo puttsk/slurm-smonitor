@@ -1,3 +1,7 @@
+# Copyright (c) 2019 Putt Sakdhnagool <putt.sakdhnagool@nectec.or.th>,
+#
+from __future__ import print_function
+
 class NodeSpecification(object):
     def __init__(self, sockets, cpus_per_socket):
         self.sockets = sockets
