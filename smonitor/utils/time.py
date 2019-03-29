@@ -25,7 +25,10 @@ def date_range(start_date, end_date, span='day'):
 
         for n in range(week_count):
             if n == 0:
-                yield TimeSpan(start_date, week_begin + timedelta(days=7))
+                if ((week_begin + timedelta(days=(n+1)*7)) - end_date).days > 0:
+                    yield TimeSpan(start_date, end_date)
+                else:
+                    yield TimeSpan(start_date, week_begin + timedelta(days=7))
             else:
                 if ((week_begin + timedelta(days=(n+1)*7)) - end_date).days > 0:
                     yield TimeSpan(week_begin + timedelta(days=n*7), end_date)
@@ -44,7 +47,6 @@ def date_range(start_date, end_date, span='day'):
         else:
             month_count =  month_end.month - month_begin.month + 1
 
-        print(year_diff, month_count)
         for n in range(month_count):
             c_month =  ((month_begin.month + n - 1) % 12) + 1
             c_year = (month_begin.year) + ((month_begin.month + n - 1) / 12)
@@ -53,7 +55,10 @@ def date_range(start_date, end_date, span='day'):
                 n_year = month_begin.year if month_begin.month < 12 else month_begin.year + 1
                 n_month = month_begin.month + 1 if month_begin.month < 12 else 1
 
-                yield TimeSpan(start_date, datetime(year=n_year, month=n_month, day=1))
+                if datetime(year=n_year, month=n_month, day=1) > end_date:
+                    yield TimeSpan(start_date, end_date)
+                else:
+                    yield TimeSpan(start_date, datetime(year=n_year, month=n_month, day=1))
             elif n == month_count-1:
                 yield TimeSpan(datetime(year=c_year, month=c_month, day=1), end_date)
             else:
@@ -63,10 +68,17 @@ def date_range(start_date, end_date, span='day'):
                 yield TimeSpan(datetime(year=c_year, month=c_month, day=1), datetime(year=n_year, month=n_month, day=1))
 
     elif span == 'year':
-        year_begin = datetime(year=start_date.year, month=1, day=1)
-        year_end = datetime(year=end_date.year, month=1, day=1)
+        year_count = end_date.year - start_date.year + 1
 
-        year_diff = max(month_end.year - month_begin.year - 1, 0)
-
+        for n in range(year_count):
+            if n == 0:
+                if datetime(year=start_date.year+n+1, month=1, day=1) > end_date:
+                    yield TimeSpan(start_date, end_date)
+                else:
+                    yield TimeSpan(start_date, datetime(year=start_date.year+n+1, month=1, day=1))
+            elif n == year_count-1:
+                yield TimeSpan(datetime(year=start_date.year+n, month=1, day=1), end_date)
+            else:
+                yield TimeSpan(datetime(year=start_date.year+n, month=1, day=1), datetime(year=month_begin.year+n+1, month=1, day=1))
     else:
         raise ValueError('Invalid span value. Valid values: day, week, month, year')

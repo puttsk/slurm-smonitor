@@ -47,19 +47,20 @@ def main():
 
     if args.type == 'utilization':
         output = []
-        begin_date = datetime.strptime("2019-02-21", '%Y-%m-%d')
+        begin_date = datetime.strptime("2019-03-21", '%Y-%m-%d')
 
         for d in date_range(begin_date, datetime.now(), span='day'):
             sreport_command = 'sreport -P -t min cluster utilization start={} end={}'.format(d.start.strftime('%Y-%m-%d'), d.end.strftime('%Y-%m-%d'))
             sreport_output = subprocess.check_output(sreport_command.split(' '), universal_newlines=True)
             sreport_results = SlurmParser.parse_output(sreport_output)
 
-            utilization = sreport_results.results[0]
-            utilization['StartDate'] = d.start.strftime('%Y-%m-%d')
-            utilization['EndDate'] = d.end.strftime('%Y-%m-%d')
-            utilization['Utilization'] = utilization['Allocated'] / float(utilization['Reported'])
+            if len(sreport_results.results) > 0:
+                utilization = sreport_results.results[0]
+                utilization['StartDate'] = d.start.strftime('%Y-%m-%d')
+                utilization['EndDate'] = d.end.strftime('%Y-%m-%d')
+                utilization['Utilization'] = utilization['Allocated'] / float(utilization['Reported'])
 
-            output.append(utilization)
+                output.append(utilization)
 
         if args.format == 'json':
             if args.output:
