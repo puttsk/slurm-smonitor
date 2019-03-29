@@ -11,7 +11,7 @@ import subprocess
 from datetime import datetime, timedelta
 from pprint import pprint
 
-from .config import __version__
+from .config import __version__, SERVICE_BEGIN_DATE
 
 from .slurm.parser import SlurmParser
 from .utils.time import date_range
@@ -25,6 +25,12 @@ def parse_args():
         'type', action='store', nargs='?', help="Monitoring metric. Valid values: 'utility'")
     parser.add_argument(
         '--format', action='store', help="Output format. Valid values: 'json'")
+    parser.add_argument(
+        '--start', action='store', help="Period start for report. Supported format: YYYY-MM-DD.")
+    parser.add_argument(
+        '--end', action='store', help="Period ending for report. Supported format: YYYY-MM-DD.")
+    parser.add_argument(
+        '--freq', action='store', default='day', help="Report frequency. Valid values: 'day', 'week', 'month', 'year'. Default: 'day'")
     parser.add_argument(
         '-o','--output', action='store', help="output file")
     parser.add_argument(
@@ -47,9 +53,11 @@ def main():
 
     if args.type == 'utilization':
         output = []
-        begin_date = datetime.strptime("2019-03-21", '%Y-%m-%d')
 
-        for d in date_range(begin_date, datetime.now(), span='day'):
+        begin_date = datetime.strptime(args.start if args.start else SERVICE_BEGIN_DATE, '%Y-%m-%d')
+        end_date = datetime.strptime(args.end, '%Y-%m-%d') if args.end else datetime.now()
+        
+        for d in date_range(begin_date, end_date, freq=args.freq):
             sreport_command = 'sreport -P -t min cluster utilization start={} end={}'.format(d.start.strftime('%Y-%m-%d'), d.end.strftime('%Y-%m-%d'))
             sreport_output = subprocess.check_output(sreport_command.split(' '), universal_newlines=True)
             sreport_results = SlurmParser.parse_output(sreport_output)

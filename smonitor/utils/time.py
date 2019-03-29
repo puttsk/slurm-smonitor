@@ -8,17 +8,17 @@ from datetime import datetime, timedelta
 
 TimeSpan = namedtuple('TimeSpan', ['start','end'])
 
-def date_range(start_date, end_date, span='day'):
+def date_range(start_date, end_date, freq='day'):
     
     # Factor for timedelta in days
     delta_factor = 1
     time_range = None
 
-    if span == 'day':
+    if freq == 'day':
         for n in range(int((end_date - start_date).days)):
             yield TimeSpan(start_date + timedelta(days=n*delta_factor), start_date + timedelta(days=(n+1)*delta_factor))
 
-    elif span == 'week':
+    elif freq == 'week':
         week_begin = start_date - timedelta(days=start_date.weekday())
         week_end = end_date - timedelta(days=end_date.weekday()) + timedelta(days=7)
         week_count = (week_end - week_begin).days / 7
@@ -35,7 +35,7 @@ def date_range(start_date, end_date, span='day'):
                 else:
                     yield TimeSpan(week_begin + timedelta(days=n*7), week_begin + timedelta(days=(n+1)*7))
     
-    elif span == 'month':
+    elif freq == 'month':
         month_begin = datetime(year=start_date.year, month=start_date.month, day=1)
         month_end = datetime(year=end_date.year, month=end_date.month, day=1)
         
@@ -67,7 +67,7 @@ def date_range(start_date, end_date, span='day'):
 
                 yield TimeSpan(datetime(year=c_year, month=c_month, day=1), datetime(year=n_year, month=n_month, day=1))
 
-    elif span == 'year':
+    elif freq == 'year':
         year_count = end_date.year - start_date.year + 1
 
         for n in range(year_count):
