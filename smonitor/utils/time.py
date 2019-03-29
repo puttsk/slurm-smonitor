@@ -36,12 +36,15 @@ def date_range(start_date, end_date, span='day'):
         month_begin = datetime(year=start_date.year, month=start_date.month, day=1)
         month_end = datetime(year=end_date.year, month=end_date.month, day=1)
         
-        year_diff = max(month_end.year - month_begin.year - 1, 0)
-        if year_diff > 0:
-            month_count =  (13-month_begin.month) + month_end.month + year_diff*12
+        year_diff = max(month_end.year - month_begin.year, 0)
+        if year_diff > 1:
+            month_count =  (13-month_begin.month) + month_end.month + (year_diff-1)*12
+        elif year_diff == 1:
+            month_count =  (13-month_begin.month) + month_end.month
         else:
             month_count =  month_end.month - month_begin.month + 1
 
+        print(year_diff, month_count)
         for n in range(month_count):
             c_month =  ((month_begin.month + n - 1) % 12) + 1
             c_year = (month_begin.year) + ((month_begin.month + n - 1) / 12)
@@ -58,6 +61,12 @@ def date_range(start_date, end_date, span='day'):
                 n_year = (month_begin.year) + ((month_begin.month + n) / 12)
 
                 yield TimeSpan(datetime(year=c_year, month=c_month, day=1), datetime(year=n_year, month=n_month, day=1))
+
+    elif span == 'year':
+        year_begin = datetime(year=start_date.year, month=1, day=1)
+        year_end = datetime(year=end_date.year, month=1, day=1)
+
+        year_diff = max(month_end.year - month_begin.year - 1, 0)
 
     else:
         raise ValueError('Invalid span value. Valid values: day, week, month, year')
