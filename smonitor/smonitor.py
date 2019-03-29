@@ -40,10 +40,31 @@ def parse_args():
 
     return parser
 
+def validate_args(args, parser):
+    if args.format:
+        if args.format not in ['json']:
+            parser.error("argument --format: invalid value '{}'. valid values: 'json'".format(args.format))
+
+    if args.freq not in ['day', 'week', 'month', 'year']:
+        parser.error("argument --freq: invalid value '{}'. valid values: 'day', 'week', 'month', 'year'".format(args.freq))
+
+    if args.start:
+        try:
+            args.start = datetime.strptime(args.start, '%Y-%m-%d')
+        except:
+            parser.error("argument --start: invalid format '{}'. valid format: YYYY-MM-DD e.g. {}".format(args.start, datetime.now().strftime('%Y-%m-%d')))
+
+    if args.end:
+        try:
+            args.end = datetime.strptime(args.end, '%Y-%m-%d')
+        except:
+            parser.error("argument --end: invalid format '{}'. valid format: YYYY-MM-DD e.g. {}".format(args.end, datetime.now().strftime('%Y-%m-%d')))
+
 def main():
     parser = parse_args()
     args = parser.parse_args()
-
+    validate_args(args, parser)
+    
     if args.verbose:
         def verbose_print(*a, **k):
             if k.pop('level', 0) <= args.verbose:
@@ -54,8 +75,8 @@ def main():
     if args.type == 'utilization':
         output = []
 
-        begin_date = datetime.strptime(args.start if args.start else SERVICE_BEGIN_DATE, '%Y-%m-%d')
-        end_date = datetime.strptime(args.end, '%Y-%m-%d') if args.end else datetime.now()
+        begin_date = args.start if args.start else datetime.strptime(SERVICE_BEGIN_DATE, '%Y-%m-%d')
+        end_date = args.end if args.end else datetime.now()
         
         for d in date_range(begin_date, end_date, freq=args.freq):
             sreport_command = 'sreport -P -t min cluster utilization start={} end={}'.format(d.start.strftime('%Y-%m-%d'), d.end.strftime('%Y-%m-%d'))
