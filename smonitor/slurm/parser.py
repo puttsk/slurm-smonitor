@@ -9,11 +9,6 @@ import json
 from pprint import pprint
 from collections import OrderedDict
 
-class SlurmResult(object):
-    def __init__(self, results, fields=None):
-        self.results = results
-        self.fields = fields
-
 class SlurmParser(object):
     APPEND = 'APPEND'
     FIRST = 'FIRST'
@@ -84,8 +79,7 @@ class SlurmParser(object):
             else:
                 output.append(entry)
 
-
-        return SlurmResult(output)
+        return output
 
     @staticmethod
     def parse_output(slurm_output, headers=None, key=None, key_conflict=APPEND):
@@ -115,7 +109,7 @@ class SlurmParser(object):
         output_map = [zip(headers,line.split('|')) for line in slurm_output]
 
         if not key:            
-            return SlurmResult([{k.strip():SlurmParser.__conv(v) for k,v in record} for record in output_map], fields=headers)
+            return [{k.strip():SlurmParser.__conv(v) for k,v in record} for record in output_map]
 
         if key: 
             ret = {}
@@ -134,4 +128,4 @@ class SlurmParser(object):
                         raise ValueError('Invalid key_conflict.') 
                 else:
                     ret[d[key]] = d
-            return SlurmResult(ret, fields=headers)
+            return ret

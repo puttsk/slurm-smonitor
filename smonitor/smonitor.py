@@ -79,7 +79,7 @@ def main():
         begin_date = args.start if args.start else datetime.strptime(SERVICE_BEGIN_DATE, '%Y-%m-%d')
         end_date = args.end if args.end else datetime.now()
         
-        output = report_utilization(begin_date, end_date, freq=args.freq, unit=args.unit)
+        output = report_utilization(begin_date, end_date, freq=args.freq, time_unit=args.unit)
         generate_output(output, args.format, args.output)
 
     else:
