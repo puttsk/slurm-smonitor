@@ -8,7 +8,6 @@ from ..utils.time import date_range
 from ..slurm.parser import SlurmParser
 
 def report_utilization(begin_date, end_date, freq='day', time_unit='min'):
-    output = []
 
     if freq not in ['day', 'week', 'month', 'year']:
         raise ValueError('Invalid freq value')
@@ -28,6 +27,4 @@ def report_utilization(begin_date, end_date, freq='day', time_unit='min'):
             utilization['Utilization'] = utilization['Allocated'] / float(utilization['Reported'])
             utilization['Unit'] = time_unit
 
-            output.append(utilization)
-
-    return output
+            yield utilization

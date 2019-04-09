@@ -3,15 +3,21 @@
 from __future__ import print_function
 
 import json
+import types
 
 from pprint import pprint
 
-def generate_output(data, output_format, output_file=None):
+def generate_output(data, output_format, output_file=None, indent_size=4):
     if output_format == 'json':
         if output_file:
             with open(output_file, 'wt') as f:
-                json.dump(data, f, indent=4, sort_keys=True)
+                if isinstance(data, types.GeneratorType):
+                    data = list(data)
+                json.dump(data, f, indent=indent_size, sort_keys=True)
         else:
-            print(json.dumps(data, indent=4, sort_keys=True))
+            # Print output to STDOUT
+            if isinstance(data, types.GeneratorType):
+                data = list(data)
+            print(json.dumps(data, indent=indent_size, sort_keys=True))
     else:
-        pprint(data)
+        pprint([x for x in data])
