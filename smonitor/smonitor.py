@@ -30,6 +30,8 @@ def parse_args():
     parser.add_argument(
         '--freq', action='store', default='day', help="Report frequency. Valid values: 'day', 'week', 'month', 'year'. Default: 'day'")
     parser.add_argument(
+        '-t', '--time-unit', dest='unit', action='store', default='min', help="Report unit. Valid values: 'sec', 'min', 'hour'. Default: 'min'")
+    parser.add_argument(
         '-o','--output', action='store', help="output file")
     parser.add_argument(
         '-V', '--version', action='version', version=version)
@@ -45,6 +47,9 @@ def validate_args(args, parser):
 
     if args.freq not in ['day', 'week', 'month', 'year']:
         parser.error("argument --freq: invalid value '{}'. valid values: 'day', 'week', 'month', 'year'".format(args.freq))
+    
+    if args.unit not in ['sec', 'min', 'hour']:
+        parser.error("argument --unit: invalid value '{}'. valid values: 'sec', 'min', 'hour'".format(args.unit))
 
     if args.start:
         try:
@@ -74,7 +79,7 @@ def main():
         begin_date = args.start if args.start else datetime.strptime(SERVICE_BEGIN_DATE, '%Y-%m-%d')
         end_date = args.end if args.end else datetime.now()
         
-        output = report_utilization(begin_date, end_date, freq=args.freq)
+        output = report_utilization(begin_date, end_date, freq=args.freq, unit=args.unit)
         generate_output(output, args.format, args.output)
 
     else:
