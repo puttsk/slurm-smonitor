@@ -20,7 +20,7 @@ def parse_args():
 
     parser = argparse.ArgumentParser(prog='smonitor', description='Slurm monitoring tools')
     parser.add_argument(
-        'type', action='store', nargs='?', help="Monitoring metric. Valid values: 'utility'")
+        'type', action='store', nargs='?', help="Monitoring metric. Valid values: 'utilization'")
     parser.add_argument(
         '--format', action='store', help="Output format. Valid values: 'json'")
     parser.add_argument(
