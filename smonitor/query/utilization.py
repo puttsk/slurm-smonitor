@@ -7,7 +7,7 @@ import subprocess
 from ..utils.time import date_range
 from ..slurm.parser import SlurmParser
 
-def report_utilization(begin_date, end_date, freq='day', time_unit='min'):
+def query_utilization(begin_date, end_date, freq='day', time_unit='min'):
 
     if freq not in ['day', 'week', 'month', 'year']:
         raise ValueError('Invalid freq value')
