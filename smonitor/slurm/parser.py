@@ -82,7 +82,10 @@ class SlurmParser(object):
         return output
 
     @staticmethod
-    def parse_output(slurm_output, headers=None, key=None, key_conflict=APPEND):
+    def parse_output(slurm_output, headers=None, key=None, key_conflict=APPEND, convert_key=None):
+        # convert_key: a function for converting headers string, e.g. converting 
+        # from CamelCast to snake_case
+
         if type(slurm_output) is str:
             slurm_output = slurm_output.splitlines()
 
@@ -104,7 +107,10 @@ class SlurmParser(object):
             slurm_output.pop(0)
 
         if not headers:
-            headers = slurm_output.pop(0).split('|')
+            headers = map(lambda x: x.strip(), slurm_output.pop(0).split('|'))
+
+        if convert_key:
+            headers = map(convert_key, headers)
 
         output_map = [zip(headers,line.split('|')) for line in slurm_output]
 
