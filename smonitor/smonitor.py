@@ -13,14 +13,26 @@ from .config import __version__, SERVICE_BEGIN_DATE
 
 from .utils.io import generate_output
 from .query.utilization import query_utilization
+from .query.usage import query_usage, query_group_usage
 
 def parse_args():
+    def list_str(values):
+        return values.split(',')
+
     slurm_version = str(subprocess.check_output(['sinfo', '--version']))
     version = 'smonitor v.{} with {}'.format(__version__, slurm_version)
 
     parser = argparse.ArgumentParser(prog='smonitor', description='Slurm monitoring tools')
     parser.add_argument(
         'type', action='store', nargs='?', help="Monitoring metric. Valid values: 'utilization'")
+    parser.add_argument(
+        '-A','--account', default=None, action='store', type=list_str, help="a comma separated list of account to be displayed")
+    parser.add_argument(
+        '--fields', default=None, action='store', type=list_str, help="a comma separated list of fields.")
+    parser.add_argument(
+        '--groups_by', default=None, action='store', type=list_str, help="grouping result using a comma separated list of fields.")
+    parser.add_argument(
+        '--groups_by_fields', default=None, action='store', type=list_str, help="a comma separated list of fields to be displayed after grouping.")
     parser.add_argument(
         '--format', action='store', help="Output format. Valid values: 'json'")
     parser.add_argument(
@@ -81,7 +93,27 @@ def main():
         
         output = query_utilization(begin_date, end_date, freq=args.freq, time_unit=args.unit)
         generate_output(output, args.format, args.output)
+    elif args.type == 'usage':
+        begin_date = args.start if args.start else datetime.strptime(SERVICE_BEGIN_DATE, '%Y-%m-%d')
+        end_date = args.end if args.end else datetime.now()
 
+        if args.groups_by:
+            output = query_group_usage(
+                begin_date, 
+                end_date, 
+                account_list=args.account, 
+                groups_by=args.groups_by,
+                groups_by_fields=args.groups_by_fields
+            )
+        else:
+            output = query_usage(
+                begin_date, 
+                end_date, 
+                account_list=args.account,
+                fields=args.fields
+            )
+
+        generate_output(output, args.format, args.output)
     else:
         parser.print_help()
 
