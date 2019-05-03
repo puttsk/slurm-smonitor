@@ -24,9 +24,9 @@ def parse_args():
 
     parser = argparse.ArgumentParser(prog='smonitor', description='Slurm monitoring tools')
     parser.add_argument(
-        'type', action='store', nargs='?', help="Monitoring metric. Valid values: 'utilization'")
+        'type', action='store', nargs='?', help="Monitoring metric. Valid values: 'utilization', 'usage'")
     parser.add_argument(
-        '-A','--account', default=None, action='store', type=list_str, help="a comma separated list of account to be displayed")
+        '-A','--account', default=None, dest='account_list', action='store', type=list_str, help="a comma separated list of account to be displayed")
     parser.add_argument(
         '--fields', default=None, action='store', type=list_str, help="a comma separated list of fields.")
     parser.add_argument(
@@ -101,7 +101,7 @@ def main():
             output = query_group_usage(
                 begin_date, 
                 end_date, 
-                account_list=args.account, 
+                account_list=args.account_list, 
                 groups_by=args.groups_by,
                 groups_by_fields=args.groups_by_fields
             )
@@ -109,7 +109,7 @@ def main():
             output = query_usage(
                 begin_date, 
                 end_date, 
-                account_list=args.account,
+                account_list=args.account_list,
                 fields=args.fields
             )
 
