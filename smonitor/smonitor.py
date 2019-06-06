@@ -112,7 +112,7 @@ def main():
                 account_list=args.account_list,
                 fields=args.fields
             )
-
+            
         generate_output(output, args.format, args.output)
     else:
         parser.print_help()
