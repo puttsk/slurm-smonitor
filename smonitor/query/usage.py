@@ -159,19 +159,21 @@ def __preprocess_job(job):
         job['su_usage'] = job['alloc_tres'].get('billing', 0) * job['elasped_mins']
 
 def query_usage(begin_date, end_date, account_list=None, fields=None):
-    sacct_command = 'sacct -P -aX --format={} --start={} --end={}'.format(
+    optional_options = ''
+    if account_list:
+        optional_options = optional_options + '-A {}'.format(','.join(account_list))
+    
+    sacct_command = 'sacct -P -aX --format={} --start={} --end={} {}'.format(
         ','.join(SACCT_FIELDS), 
         begin_date.strftime('%Y-%m-%dT%H:%M:%S'), 
-        end_date.strftime('%Y-%m-%dT%H:%M:%S')
-    )
+        end_date.strftime('%Y-%m-%dT%H:%M:%S'),
+        optional_options
+    ).strip()
     
     sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
     sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
 
     for job in sacct_results:
-        if account_list:
-            if job['account'] not in account_list:
-                continue
 
         __preprocess_job(job)
         
@@ -181,21 +183,23 @@ def query_usage(begin_date, end_date, account_list=None, fields=None):
             yield job
 
 def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account_list=None):
-    sacct_command = 'sacct -P -aX --format={} --start={} --end={}'.format(
+    optional_options = ''
+    if account_list:
+        optional_options = optional_options + '-A {}'.format(','.join(account_list))
+    
+    sacct_command = 'sacct -P -aX --noconvert --format={} --start={} --end={} {}'.format(
         ','.join(SACCT_FIELDS), 
         begin_date.strftime('%Y-%m-%dT%H:%M:%S'), 
-        end_date.strftime('%Y-%m-%dT%H:%M:%S')
-    )
-    
+        end_date.strftime('%Y-%m-%dT%H:%M:%S'),
+        optional_options
+    ).strip()
+
     sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
     sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
 
     output = {}
 
     for job in sacct_results:
-        if account_list:
-            if job['account'] not in account_list:
-                continue
 
         __preprocess_job(job)
         
@@ -216,7 +220,7 @@ def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account
         else:
             output_ptr.update(data)
             output_ptr['__count'] = 1
-            
+
     return output
             
                 
