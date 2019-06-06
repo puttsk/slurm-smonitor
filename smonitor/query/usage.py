@@ -182,6 +182,17 @@ def query_usage(begin_date, end_date, account_list=None, fields=None):
         else:
             yield job
 
+def __update_dict(src, val):
+    for key in src:
+        if not isinstance(val, dict):
+            return None
+
+        if isinstance(src[key], dict):
+            __update_dict(src[key], val=val[key])
+        else:
+            src[key] = src[key] + val[key]
+            
+
 def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account_list=None):
     optional_options = ''
     if account_list:
@@ -215,13 +226,23 @@ def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account
 
         if output_ptr:
             for key in data:
-                output_ptr[key] = output_ptr[key] + data[key]
+                if isinstance(output_ptr[key], dict):
+                    __update_dict(output_ptr[key], data[key])
+                else:
+                    output_ptr[key] = output_ptr[key] + data[key]
                 output_ptr['__count'] = output_ptr['__count'] + 1
         else:
             output_ptr.update(data)
             output_ptr['__count'] = 1
 
+    if 'su_usage' in groups_by_fields:
+        __update_su(output)
+
     return output
             
-                
-        
+def __update_su(d):
+    for key in d:
+        if isinstance(d[key], dict):
+            __update_su(d[key])
+        else:
+            d['su_usage'] = math.ceil(d['su_usage'])
