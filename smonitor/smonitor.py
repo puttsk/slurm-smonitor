@@ -103,14 +103,16 @@ def main():
                 end_date, 
                 account_list=args.account_list, 
                 groups_by=args.groups_by,
-                groups_by_fields=args.groups_by_fields
+                groups_by_fields=args.groups_by_fields,
+                freq=args.freq
             )
         else:
             output = query_usage(
                 begin_date, 
                 end_date, 
                 account_list=args.account_list,
-                fields=args.fields
+                fields=args.fields,
+                freq=args.freq
             )
             
         generate_output(output, args.format, args.output)

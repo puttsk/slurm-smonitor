@@ -7,7 +7,7 @@ import math
 import re
 
 from pprint import pprint
-from collections import namedtuple
+from collections import namedtuple, OrderedDict
 from datetime import timedelta
 
 from ..utils.time import date_range
@@ -158,7 +158,7 @@ def __preprocess_job(job):
         job['elasped_mins'] = int(job['elapsed_raw']) / 60.0
         job['su_usage'] = job['alloc_tres'].get('billing', 0) * job['elasped_mins']
 
-def query_usage(begin_date, end_date, account_list=None, fields=None):
+def query_usage(begin_date, end_date, account_list=None, fields=None, freq=None):
     optional_options = ''
     if account_list:
         optional_options = optional_options + '-A {}'.format(','.join(account_list))
@@ -193,56 +193,60 @@ def __update_dict(src, val):
             src[key] = src[key] + val[key]
             
 
-def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account_list=None):
+def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account_list=None, freq=None):
     optional_options = ''
     if account_list:
         optional_options = optional_options + '-A {}'.format(','.join(account_list))
     
-    sacct_command = 'sacct -P -aX --noconvert --format={} --start={} --end={} {}'.format(
-        ','.join(SACCT_FIELDS), 
-        begin_date.strftime('%Y-%m-%dT%H:%M:%S'), 
-        end_date.strftime('%Y-%m-%dT%H:%M:%S'),
-        optional_options
-    ).strip()
+    for d in date_range(begin_date, end_date, freq=freq):
+        sacct_command = 'sacct -P -aX --noconvert --format={} --start={} --end={} {}'.format(
+            ','.join(SACCT_FIELDS), 
+            d.start.strftime('%Y-%m-%dT%H:%M:%S'), 
+            d.end.strftime('%Y-%m-%dT%H:%M:%S'),
+            optional_options
+        ).strip()
 
-    sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
-    sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
+        sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
+        sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
 
-    output = {}
+        output = OrderedDict()
 
-    for job in sacct_results:
+        output['start_date'] = d.start.strftime('%Y-%m-%dT%H:%M:%S')
+        output['end_date'] = d.end.strftime('%Y-%m-%dT%H:%M:%S')
 
-        __preprocess_job(job)
-        
-        data = { field: job[field] for field in groups_by_fields }
-        
-        output_ptr = output
-        for key in groups_by:
-            if job[key] in output_ptr:
-                output_ptr = output_ptr[job[key]]
-            else:
-                output_ptr[job[key]] = {}
-                output_ptr = output_ptr[job[key]]
+        for job in sacct_results:
 
-        if output_ptr:
-            for key in data:
-                if isinstance(output_ptr[key], dict):
-                    __update_dict(output_ptr[key], data[key])
+            __preprocess_job(job)
+            
+            data = { field: job[field] for field in groups_by_fields }
+            
+            output_ptr = output
+            for key in groups_by:
+                if job[key] in output_ptr:
+                    output_ptr = output_ptr[job[key]]
                 else:
-                    output_ptr[key] = output_ptr[key] + data[key]
-                output_ptr['__count'] = output_ptr['__count'] + 1
-        else:
-            output_ptr.update(data)
-            output_ptr['__count'] = 1
+                    output_ptr[job[key]] = {}
+                    output_ptr = output_ptr[job[key]]
 
-    if 'su_usage' in groups_by_fields:
-        __update_su(output)
+            if output_ptr:
+                for key in data:
+                    if isinstance(output_ptr[key], dict):
+                        __update_dict(output_ptr[key], data[key])
+                    else:
+                        output_ptr[key] = output_ptr[key] + data[key]
+                    output_ptr['__count'] = output_ptr['__count'] + 1
+            else:
+                output_ptr.update(data)
+                output_ptr['__count'] = 1
 
-    return output
+        if 'su_usage' in groups_by_fields:
+            __update_su(output)
+
+        yield output
             
 def __update_su(d):
     for key in d:
         if isinstance(d[key], dict):
             __update_su(d[key])
-        else:
+        elif 'su_usage' in d.keys():
             d['su_usage'] = math.ceil(d['su_usage'])
