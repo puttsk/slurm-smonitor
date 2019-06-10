@@ -226,6 +226,7 @@ def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account
                     output_ptr = output_ptr[job[key]]
                 else:
                     output_ptr[job[key]] = {}
+                    output_ptr['field'] = key
                     output_ptr = output_ptr[job[key]]
 
             if output_ptr:
