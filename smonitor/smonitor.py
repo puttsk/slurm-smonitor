@@ -12,6 +12,7 @@ from datetime import datetime
 from .config import __version__, SERVICE_BEGIN_DATE
 
 from .utils.io import generate_output
+from .utils.data import flattern_nested_dict
 from .query.utilization import query_utilization
 from .query.usage import query_usage, query_group_usage
 
@@ -53,15 +54,19 @@ def parse_args():
     return parser
 
 def validate_args(args, parser):
-    if args.format:
-        if args.format not in ['json']:
-            parser.error("argument --format: invalid value '{}'. valid values: 'json'".format(args.format))
+    supported_format = ['json']
+    supported_freq = ['day', 'week', 'month', 'year']
+    supported_unit = ['sec', 'min', 'hour']
 
-    if args.freq and args.freq not in ['day', 'week', 'month', 'year']:
-        parser.error("argument --freq: invalid value '{}'. valid values: 'day', 'week', 'month', 'year'".format(args.freq))
+    if args.format:
+        if args.format not in supported_format:
+            parser.error("argument --format: invalid value '{}'. valid values: {}".format(args.format, ', '.join(map(lambda x: "'{}'".format(x), supported_format))))
+
+    if args.freq and args.freq not in supported_freq:
+        parser.error("argument --freq: invalid value '{}'. valid values: {}".format(args.freq, ', '.join(map(lambda x: "'{}'".format(x), supported_freq))))
     
-    if args.unit not in ['sec', 'min', 'hour']:
-        parser.error("argument --unit: invalid value '{}'. valid values: 'sec', 'min', 'hour'".format(args.unit))
+    if args.unit not in supported_unit:
+        parser.error("argument --unit: invalid value '{}'. valid values: {}".format(args.unit, ', '.join(map(lambda x: "'{}'".format(x), supported_unit))))
 
     if args.start:
         try:
@@ -114,8 +119,13 @@ def main():
                 fields=args.fields,
                 freq=args.freq
             )
-            
-        generate_output(output, args.format, args.output)
+        
+        if args.format != 'json':
+            flatten_output = [] 
+            for o in output:
+                flatten_output += flattern_nested_dict(o)
+            generate_output(flatten_output)
+        else:
+            generate_output(output, args.format, args.output)
     else:
         parser.print_help()
-

@@ -163,24 +163,24 @@ def query_usage(begin_date, end_date, account_list=None, fields=None, freq=None)
     if account_list:
         optional_options = optional_options + '-A {}'.format(','.join(account_list))
     
-    sacct_command = 'sacct -P -aX --format={} --start={} --end={} {}'.format(
-        ','.join(SACCT_FIELDS), 
-        begin_date.strftime('%Y-%m-%dT%H:%M:%S'), 
-        end_date.strftime('%Y-%m-%dT%H:%M:%S'),
-        optional_options
-    ).strip()
-    
-    sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
-    sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
-
-    for job in sacct_results:
-
-        __preprocess_job(job)
+    for d in date_range(begin_date, end_date, freq=freq):
+        sacct_command = 'sacct -P -aX --format={} --start={} --end={} {}'.format(
+            ','.join(SACCT_FIELDS), 
+            d.start.strftime('%Y-%m-%dT%H:%M:%S'), 
+            d.end.strftime('%Y-%m-%dT%H:%M:%S'),
+            optional_options
+        ).strip()
         
-        if fields:
-            yield { f: job[f] for f in fields }
-        else:
-            yield job
+        sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
+        sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
+
+        for job in sacct_results:
+            __preprocess_job(job)
+            
+            if fields:
+                yield { f: job[f] for f in fields }
+            else:
+                yield job
 
 def __update_dict(src, val):
     for key in src:
