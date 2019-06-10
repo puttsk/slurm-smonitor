@@ -14,7 +14,10 @@ def date_range(start_date, end_date, freq='day'):
     delta_factor = 1
     time_range = None
 
-    if freq == 'day':
+    if freq == None:
+        yield TimeSpan(start_date, end_date)
+
+    elif freq == 'day':
         for n in range(int((end_date - start_date).days)):
             yield TimeSpan(start_date + timedelta(days=n*delta_factor), start_date + timedelta(days=(n+1)*delta_factor))
 

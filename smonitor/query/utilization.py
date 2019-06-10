@@ -9,7 +9,7 @@ from ..slurm.parser import SlurmParser
 
 def query_utilization(begin_date, end_date, freq='day', time_unit='min'):
 
-    if freq not in ['day', 'week', 'month', 'year']:
+    if freq and freq not in ['day', 'week', 'month', 'year']:
         raise ValueError('Invalid freq value')
 
     if time_unit not in ['sec', 'min', 'hour']:

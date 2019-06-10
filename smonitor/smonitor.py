@@ -40,7 +40,7 @@ def parse_args():
     parser.add_argument(
         '--end', action='store', help="Period ending for report. Supported format: YYYY-MM-DD.")
     parser.add_argument(
-        '--freq', action='store', default='day', help="Report frequency. Valid values: 'day', 'week', 'month', 'year'. Default: 'day'")
+        '--freq', action='store', default=None, help="Report frequency. Valid values: 'day', 'week', 'month', 'year'. Default: 'day'")
     parser.add_argument(
         '-t', '--time-unit', dest='unit', action='store', default='min', help="Report unit. Valid values: 'sec', 'min', 'hour'. Default: 'min'")
     parser.add_argument(
@@ -57,7 +57,7 @@ def validate_args(args, parser):
         if args.format not in ['json']:
             parser.error("argument --format: invalid value '{}'. valid values: 'json'".format(args.format))
 
-    if args.freq not in ['day', 'week', 'month', 'year']:
+    if args.freq and args.freq not in ['day', 'week', 'month', 'year']:
         parser.error("argument --freq: invalid value '{}'. valid values: 'day', 'week', 'month', 'year'".format(args.freq))
     
     if args.unit not in ['sec', 'min', 'hour']:
