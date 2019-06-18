@@ -6,6 +6,7 @@ from __future__ import print_function
 import json
 import argparse
 import subprocess
+import sys
 
 from datetime import datetime
 
@@ -54,7 +55,7 @@ def parse_args():
     return parser
 
 def validate_args(args, parser):
-    supported_format = ['json']
+    supported_format = ['json', 'table', 'csv']
     supported_freq = ['day', 'week', 'month', 'year']
     supported_unit = ['sec', 'min', 'hour']
 
@@ -124,7 +125,7 @@ def main():
             flatten_output = [] 
             for o in output:
                 flatten_output += flattern_nested_dict(o)
-            generate_output(flatten_output)
+            generate_output(flatten_output, args.format, args.output)
         else:
             generate_output(output, args.format, args.output)
     else:

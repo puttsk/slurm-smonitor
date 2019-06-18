@@ -209,7 +209,7 @@ def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account
         sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
         sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
 
-        output = OrderedDict()
+        output = {}
 
         output['start_date'] = d.start.strftime('%Y-%m-%dT%H:%M:%S')
         output['end_date'] = d.end.strftime('%Y-%m-%dT%H:%M:%S')

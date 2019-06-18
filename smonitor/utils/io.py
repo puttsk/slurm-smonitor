@@ -4,6 +4,7 @@ from __future__ import print_function
 
 import json
 import types
+import csv
 
 from pprint import pprint
 
@@ -19,6 +20,13 @@ def generate_output(data, format='table', output_file=None, indent_size=4):
             if isinstance(data, types.GeneratorType):
                 data = list(data)
             print(json.dumps(data, indent=indent_size, sort_keys=True))
+    elif format == 'csv':
+        if output_file:
+            with open(output_file, 'wb') as f:
+                writer = csv.DictWriter(f, fieldnames=data[0].keys())
+                writer.writeheader()
+                for d in data:
+                    writer.writerow(d)
     else:
         if isinstance(data, types.GeneratorType) or isinstance(data, list):
             __print_table_from_list(data, indent_size)
