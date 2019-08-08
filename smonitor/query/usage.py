@@ -139,9 +139,14 @@ def __conv(val):
     return val
 
 def __preprocess_job(job):
-    job['req_tres'] = {k:__conv(v) for k,v in (x.split('=') for x in job['req_tres'].strip().split(','))}
+    if job['req_tres']:
+        job['req_tres'] = {k:__conv(v) for k,v in (x.split('=') for x in job['req_tres'].strip().split(','))}
+    else:
+        job['req_tres'] = {}
+        
     job['elasped_mins'] = 0
     job['su_usage'] = 0
+    
     try:
         datetime_match = datetime_regex.match(job['reserved'])
         job['reserved'] = timedelta(
