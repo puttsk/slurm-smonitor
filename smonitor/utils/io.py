@@ -14,12 +14,12 @@ def generate_output(data, format='table', output_file=None, indent_size=4):
             with open(output_file, 'wt') as f:
                 if isinstance(data, types.GeneratorType):
                     data = list(data)
-                json.dump(data, f, indent=indent_size, sort_keys=True)
+                json.dump(data, f, indent=indent_size, sort_keys=True, default=str)
         else:
             # Print output to STDOUT
             if isinstance(data, types.GeneratorType):
                 data = list(data)
-            print(json.dumps(data, indent=indent_size, sort_keys=True))
+            print(json.dumps(data, indent=indent_size, sort_keys=True, default=str))
     elif format == 'csv':
         if output_file:
             with open(output_file, 'wb') as f:

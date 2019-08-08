@@ -8,7 +8,7 @@ import re
 
 from pprint import pprint
 from collections import namedtuple, OrderedDict
-from datetime import timedelta
+from datetime import timedelta, datetime
 
 from ..utils.time import date_range
 from ..utils.string import to_snake_case
@@ -139,11 +139,15 @@ def __conv(val):
     return val
 
 def __preprocess_job(job):
+    
+    if job.get('__processed', None):
+        return job
+
     if job['req_tres']:
         job['req_tres'] = {k:__conv(v) for k,v in (x.split('=') for x in job['req_tres'].strip().split(','))}
     else:
-        job['req_tres'] = {}
-        
+        job['req_tres'] = None
+
     job['elasped_mins'] = 0
     job['su_usage'] = 0
     
@@ -158,34 +162,59 @@ def __preprocess_job(job):
     except AttributeError:
         job['reserved'] = timedelta(0).total_seconds()
 
+    if not isinstance(job['end'], datetime):
+        try:
+            job['end'] = datetime.strptime(job['end'], '%Y-%m-%dT%H:%M:%S')
+        except ValueError:
+            job['end'] = None
+
     if job['alloc_tres']:
         job['alloc_tres'] = {k:__conv(v) for k,v in (x.split('=') for x in job['alloc_tres'].strip().split(','))}
         job['elasped_mins'] = int(job['elapsed_raw']) / 60.0
         job['su_usage'] = job['alloc_tres'].get('billing', 0) * job['elasped_mins']
+
+    job['__processed'] = True
+
+    return job
 
 def query_usage(begin_date, end_date, account_list=None, fields=None, freq=None):
     optional_options = ''
     if account_list:
         optional_options = optional_options + '-A {}'.format(','.join(account_list))
     
+    sacct_command = 'sacct -P -aX --format={} --start={} --end={} {}'.format(
+        ','.join(SACCT_FIELDS), 
+        begin_date.strftime('%Y-%m-%dT%H:%M:%S'), 
+        end_date.strftime('%Y-%m-%dT%H:%M:%S'),
+        optional_options
+    ).strip()
+    
+    sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
+    sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
+
     for d in date_range(begin_date, end_date, freq=freq):
-        sacct_command = 'sacct -P -aX --format={} --start={} --end={} {}'.format(
-            ','.join(SACCT_FIELDS), 
-            d.start.strftime('%Y-%m-%dT%H:%M:%S'), 
-            d.end.strftime('%Y-%m-%dT%H:%M:%S'),
-            optional_options
-        ).strip()
-        
-        sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
-        sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
+        output = {}
+
+        output['start_date'] = d.start.strftime('%Y-%m-%dT%H:%M:%S')
+        output['end_date'] = d.end.strftime('%Y-%m-%dT%H:%M:%S')
+        output['results'] = []
 
         for job in sacct_results:
-            __preprocess_job(job)
-            
+
+            job = __preprocess_job(job)
+
+            if (not job['end']) and (job['state'] != "RUNNING"):
+                continue
+
+            if (job['end']) and (not(d.start <= job['end'] < d.end)):
+                continue
+
             if fields:
-                yield { f: job[f] for f in fields }
+                output['results'].append({ f: job[f] for f in fields })
             else:
-                yield job
+                output['results'].append(job)
+        
+        yield output
 
 def __update_dict(src, val):
     for key in src:
@@ -197,41 +226,50 @@ def __update_dict(src, val):
         else:
             src[key] = src[key] + val[key]
             
-
 def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account_list=None, freq=None):
     optional_options = ''
     if account_list:
         optional_options = optional_options + '-A {}'.format(','.join(account_list))
-    
+
+    sacct_command = 'sacct -P -aX --noconvert --format={} --start={} --end={} {}'.format(
+        ','.join(SACCT_FIELDS), 
+        begin_date.strftime('%Y-%m-%dT%H:%M:%S'), 
+        end_date.strftime('%Y-%m-%dT%H:%M:%S'),
+        optional_options
+    ).strip()
+
+    sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
+    sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
+
     for d in date_range(begin_date, end_date, freq=freq):
-        sacct_command = 'sacct -P -aX --noconvert --format={} --start={} --end={} {}'.format(
-            ','.join(SACCT_FIELDS), 
-            d.start.strftime('%Y-%m-%dT%H:%M:%S'), 
-            d.end.strftime('%Y-%m-%dT%H:%M:%S'),
-            optional_options
-        ).strip()
-
-        sacct_output = subprocess.check_output(sacct_command.split(' '), universal_newlines=True)
-        sacct_results = SlurmParser.parse_output(sacct_output, convert_key=to_snake_case)
-
+        
         output = {}
 
         output['start_date'] = d.start.strftime('%Y-%m-%dT%H:%M:%S')
         output['end_date'] = d.end.strftime('%Y-%m-%dT%H:%M:%S')
+        output['result'] = {}
+        output['fields'] = groups_by
 
         for job in sacct_results:
+            if job.get('__counted', None):
+                continue
 
-            __preprocess_job(job)
+            job = __preprocess_job(job)
             
+            if (not job['end']) and (job['state'] != "RUNNING"):
+                continue
+
+            if (job['end']) and (not(d.start <= job['end'] < d.end)):
+                continue
+
             data = { field: job[field] for field in groups_by_fields }
             
-            output_ptr = output
+            output_ptr = output['result']
             for key in groups_by:
                 if job[key] in output_ptr:
                     output_ptr = output_ptr[job[key]]
                 else:
                     output_ptr[job[key]] = {}
-                    output_ptr['field'] = key
                     output_ptr = output_ptr[job[key]]
 
             if output_ptr:
@@ -240,10 +278,16 @@ def query_group_usage(begin_date, end_date, groups_by, groups_by_fields, account
                         __update_dict(output_ptr[key], data[key])
                     else:
                         output_ptr[key] = output_ptr[key] + data[key]
-                    output_ptr['__count'] = output_ptr['__count'] + 1
+
+                    if 'count' in groups_by_fields:
+                        output_ptr['count'] = output_ptr['count'] + 1
             else:
                 output_ptr.update(data)
-                output_ptr['__count'] = 1
+                
+                if 'count' in groups_by_fields:
+                    output_ptr['count'] = 1
+
+            job['__counted'] = True
 
         if 'su_usage' in groups_by_fields:
             __update_su(output)
