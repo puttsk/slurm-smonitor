@@ -149,6 +149,7 @@ def __preprocess_job(job):
         job['req_tres'] = None
 
     job['elasped_mins'] = 0
+    job['core_hour'] = 0
     job['su_usage'] = 0
     
     try:
@@ -171,6 +172,7 @@ def __preprocess_job(job):
     if job['alloc_tres']:
         job['alloc_tres'] = {k:__conv(v) for k,v in (x.split('=') for x in job['alloc_tres'].strip().split(','))}
         job['elasped_mins'] = int(job['elapsed_raw']) / 60.0
+        job['core_hour'] = int(job['elapsed_raw']) / 3600.0 * job['alloc_tres'].get('cpu', 0)
         job['su_usage'] = job['alloc_tres'].get('billing', 0) * job['elasped_mins']
 
     job['__processed'] = True
