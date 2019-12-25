@@ -8,6 +8,7 @@ import argparse
 import subprocess
 import sys
 
+from pprint import pprint
 from datetime import datetime
 
 from .config import __version__, SERVICE_BEGIN_DATE

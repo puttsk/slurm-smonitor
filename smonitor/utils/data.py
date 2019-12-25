@@ -2,7 +2,9 @@
 #
 from __future__ import print_function
 
-def flattern_nested_dict(d, outer_fields=[], outer_data=[], field_name_key='field'):
+from pprint import pprint
+
+def flattern_nested_dict(d, outer_fields=[], outer_data=[], field_name_key='fields'):
     if field_name_key in d:
         field_name = d[field_name_key]
         inner_field = []
